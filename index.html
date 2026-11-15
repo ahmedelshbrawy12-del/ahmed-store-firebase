@@ -315,39 +315,44 @@ function scanStop(q){if(SC&&SC.st)SC.st.getTracks().forEach(t=>t.stop());if(SC&&
 function scanImg(cb){const i=document.createElement('input');i.type='file';i.accept='image/*';i.setAttribute('capture','environment');i.onchange=async()=>{const fl=i.files[0];if(!fl)return;if(!('BarcodeDetector' in window))return toast('هذا المتصفح لا يدعم قراءة الباركود. افتح الملف بمتصفح Chrome');try{const r=await new BarcodeDetector().detect(await createImageBitmap(fl));if(r.length)cb(r[0].rawValue);else toast('لم أجد باركود في الصورة. صوّره أقرب وبإضاءة أفضل')}catch(x){toast('تعذر قراءة الصورة')}};i.click()}
 const scanTo=b=>scanImg(v=>{b.previousElementSibling.value=v;toast('تم مسح الباركود: '+v)});
 render();
-</script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
+</script><script src="firebase-config.js"></script>
 <script>
-/* ---------- Firebase: login + cloud sync (offline-first) ---------- */
-(()=>{
-const A=$('#auth'),er=m=>$('#aer').textContent=m||'',UK='electro_cloud_uid',BK=KEY+'_pre_cloud_backup',CH=200000;
+/* ---------- Firebase (modular, no popup/redirect iframe): login + cloud sync, offline-first ---------- */
+(async()=>{
+const A=$('#auth'),er=m=>$('#aer').textContent=m||'',al=m=>$('#al').textContent=m,UK='electro_cloud_uid',BK=KEY+'_pre_cloud_backup',CH=200000;
+let stage='بدء',authReady=false,AU,FS,auth,fs;
+setTimeout(()=>{if(!authReady)al('تعذر إكمال التحميل عند: '+stage+' — تأكد من الإنترنت ثم أعد فتح الصفحة')},10000);
+try{
+ if(!window.FIREBASE_CONFIG)throw Error('ملف firebase-config.js غير موجود بجانب index.html');
+ stage='تحميل مكتبات Firebase';al('جارٍ التحميل… ('+stage+')');
+ const B='https://www.gstatic.com/firebasejs/10.12.2/';
+ const [APP,A1,F1]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-firestore.js')]);
+ AU=A1;FS=F1;
+ stage='تهيئة Firebase';al('جارٍ التحميل… ('+stage+')');
+ const app=APP.initializeApp(window.FIREBASE_CONFIG);
+ auth=AU.initializeAuth(app,{persistence:[AU.indexedDBLocalPersistence,AU.browserLocalPersistence]});
+ try{fs=FS.initializeFirestore(app,{localCache:FS.persistentLocalCache({tabManager:FS.persistentMultipleTabManager()})})}catch(x){console.warn('persistence',x);fs=FS.getFirestore(app)}
+}catch(x){console.error(x);al('خطأ عند «'+stage+'»: '+(x.message||x));return}
 const cloud={uid:null,ready:false,last:{},meta:{},pending:0,t:null,inc:null,col:null,unsub:null};
-const ERR={'auth/invalid-email':'بريد إلكتروني غير صحيح','auth/user-not-found':'البريد أو كلمة المرور غير صحيحة','auth/wrong-password':'البريد أو كلمة المرور غير صحيحة','auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة','auth/email-already-in-use':'هذا البريد مسجل بالفعل، سجّل دخولك','auth/weak-password':'كلمة المرور ضعيفة (6 خانات على الأقل)','auth/network-request-failed':'لا يوجد اتصال بالإنترنت','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','auth/operation-not-allowed':'فعّل Email/Password من Firebase Authentication'};
+const ERR={'auth/invalid-email':'بريد إلكتروني غير صحيح','auth/user-not-found':'البريد أو كلمة المرور غير صحيحة','auth/wrong-password':'البريد أو كلمة المرور غير صحيحة','auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة','auth/email-already-in-use':'هذا البريد مسجل بالفعل، سجّل دخولك','auth/weak-password':'كلمة المرور ضعيفة (6 خانات على الأقل)','auth/network-request-failed':'لا يوجد اتصال بالإنترنت','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','auth/operation-not-allowed':'فعّل Email/Password من Firebase Authentication','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'مفتاح apiKey غير صحيح في firebase-config.js','auth/invalid-api-key':'مفتاح apiKey غير صحيح في firebase-config.js'};
 const em=c=>ERR[c]||('خطأ: '+c);
-if(typeof firebase=='undefined'||!window.FIREBASE_CONFIG){$('#al').textContent='تعذر تحميل Firebase. افتح التطبيق مرة بالإنترنت، وتأكد من ملف firebase-config.js';return}
-firebase.initializeApp(window.FIREBASE_CONFIG);
-const auth=firebase.auth(),fs=firebase.firestore(),fsReady=fs.enablePersistence({synchronizeTabs:true}).catch(x=>console.warn('persistence',x.code));
 let mode='in';
 function setMode(m){mode=m;const up=m=='up';$('#asub').textContent=up?'إنشاء حساب جديد':'سجّل دخولك للمتابعة';$('#abt').textContent=up?'إنشاء الحساب':'تسجيل الدخول';$('#acl').style.display=up?'block':'none';$('#atg').textContent=up?'لدي حساب بالفعل':'إنشاء حساب جديد';$('#apw').autocomplete=up?'new-password':'current-password';er()}
 $('#atg').onclick=()=>setMode(mode=='in'?'up':'in');
-$('#afg').onclick=async()=>{const v=$('#aem').value.trim();if(!v)return er('اكتب بريدك أولًا ثم اضغط «نسيت كلمة المرور»');try{await auth.sendPasswordResetEmail(v);er('');toast('تم إرسال رابط تغيير كلمة المرور لبريدك')}catch(x){er(em(x.code))}};
+$('#afg').onclick=async()=>{const v=$('#aem').value.trim();if(!v)return er('اكتب بريدك أولًا ثم اضغط «نسيت كلمة المرور»');try{await AU.sendPasswordResetEmail(auth,v);er('');toast('تم إرسال رابط تغيير كلمة المرور لبريدك')}catch(x){er(em(x.code))}};
 $('#af').onsubmit=async ev=>{ev.preventDefault();er();const e1=$('#aem').value.trim(),pw=$('#apw').value;
  if(pw.length<6)return er('كلمة المرور 6 خانات على الأقل');
  if(mode=='up'&&pw!==$('#apw2').value)return er('كلمتا المرور غير متطابقتين');
  $('#abt').disabled=true;
- try{await auth.setPersistence($('#arm').checked?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION);
-  if(mode=='up')await auth.createUserWithEmailAndPassword(e1,pw);else await auth.signInWithEmailAndPassword(e1,pw)}
- catch(x){er(em(x.code))}
+ try{await AU.setPersistence(auth,$('#arm').checked?AU.browserLocalPersistence:AU.browserSessionPersistence);
+  if(mode=='up')await AU.createUserWithEmailAndPassword(auth,e1,pw);else await AU.signInWithEmailAndPassword(auth,e1,pw)}
+ catch(x){er(em(x.code||x.message))}
  $('#abt').disabled=false};
 function lock(){document.body.classList.add('locked');A.classList.add('on');$('#al').style.display='none';$('#af').style.display='block';setMode('in');$('#apw').value='';$('#apw2').value='';setTimeout(()=>$('#aem').focus(),50)}
 function unlock(){document.body.classList.remove('locked');A.classList.remove('on')}
-window.logout=async()=>{if(typeof scanStop=='function')scanStop(1);try{await auth.signOut()}catch(x){toast('تعذر تسجيل الخروج')}};
-/* status */
+window.logout=async()=>{if(typeof scanStop=='function')scanStop(1);try{await AU.signOut(auth)}catch(x){toast('تعذر تسجيل الخروج')}};
 function st(){const el=$('#sy');if(!el)return;el.textContent=!cloud.uid?'':!navigator.onLine?'📴 أوفلاين':cloud.pending?'⏳ جارٍ الرفع':'☁️ متزامن'}
 addEventListener('online',st);addEventListener('offline',st);
-/* sync */
 const keysOf=()=>Object.keys(DB).filter(k=>k!='cu'&&k!='_ts');
 const hasData=()=>DB.p.length||DB.c.length||DB.s.length||DB.sales.length||DB.j.length||DB.pur.length;
 function assemble(docs,meta){const o={};for(const k in meta.keys){let t='';for(let i=0;i<meta.keys[k];i++){const d=docs[k+'__'+i];if(!d)return null;t+=d.s}o[k]=t}return o}
@@ -379,22 +384,23 @@ window.cloudPush=force=>{if(!cloud.ready)return;clearTimeout(cloud.t);cloud.t=se
 function flush(){if(!cloud.ready)return;
  const strs={};keysOf().forEach(k=>strs[k]=JSON.stringify(DB[k]));
  const ch=Object.keys(strs).filter(k=>strs[k]!==cloud.last[k]);if(!ch.length)return;
- const ops=[],meta=Object.assign({},cloud.meta);
+ const ops=[],meta=Object.assign({},cloud.meta),D=id=>FS.doc(cloud.col,id);
  ch.forEach(k=>{const t=strs[k],n=Math.max(1,Math.ceil(t.length/CH));
-  for(let i=0;i<n;i++)ops.push(b=>b.set(cloud.col.doc(k+'__'+i),{s:t.slice(i*CH,(i+1)*CH)}));
-  for(let i=n;i<(meta[k]||0);i++)ops.push(b=>b.delete(cloud.col.doc(k+'__'+i)));
+  for(let i=0;i<n;i++)ops.push(b=>b.set(D(k+'__'+i),{s:t.slice(i*CH,(i+1)*CH)}));
+  for(let i=n;i<(meta[k]||0);i++)ops.push(b=>b.delete(D(k+'__'+i)));
   meta[k]=n;cloud.last[k]=t});
- ops.push(b=>b.set(cloud.col.doc('meta'),{keys:meta,ts:DB._ts||Date.now()}));cloud.meta=meta;
- const ps=[];for(let i=0;i<ops.length;i+=400){const b=fs.batch();ops.slice(i,i+400).forEach(o=>o(b));ps.push(b.commit())}
+ ops.push(b=>b.set(D('meta'),{keys:meta,ts:DB._ts||Date.now()}));cloud.meta=meta;
+ const ps=[];for(let i=0;i<ops.length;i+=400){const b=FS.writeBatch(fs);ops.slice(i,i+400).forEach(o=>o(b));ps.push(b.commit())}
  cloud.pending++;st();
  Promise.all(ps).catch(x=>{console.error(x);ch.forEach(k=>delete cloud.last[k]);toast('تعذر رفع البيانات: '+(x.code||''))}).finally(()=>{cloud.pending--;st()})}
 addEventListener('pagehide',()=>{if(cloud.t){clearTimeout(cloud.t);flush()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&cloud.t){clearTimeout(cloud.t);flush()}});
-async function startSync(u){if(cloud.uid==u.uid)return;stopSync();cloud.uid=u.uid;window.cloudOn=true;await fsReady;
- cloud.col=fs.collection('users').doc(u.uid).collection('db');
- cloud.unsub=cloud.col.onSnapshot({includeMetadataChanges:true},onSnap,x=>{console.error(x);toast('تعذر المزامنة: '+(x.code||''))})}
+function startSync(u){if(cloud.uid==u.uid)return;stopSync();cloud.uid=u.uid;window.cloudOn=true;
+ cloud.col=FS.collection(fs,'users',u.uid,'db');
+ cloud.unsub=FS.onSnapshot(cloud.col,{includeMetadataChanges:true},onSnap,x=>{console.error(x);toast('تعذر المزامنة: '+(x.code||''))})}
 function stopSync(){if(cloud.unsub)cloud.unsub();Object.assign(cloud,{uid:null,ready:false,last:{},meta:{},inc:null,unsub:null,col:null});window.cloudOn=false;clearTimeout(cloud.t);st()}
-auth.onAuthStateChanged(u=>{if(u){unlock();startSync(u)}else{stopSync();lock()}});
+stage='بانتظار حالة تسجيل الدخول';al('جارٍ التحميل… ('+stage+')');
+AU.onAuthStateChanged(auth,u=>{authReady=true;if(u){unlock();startSync(u)}else{stopSync();lock()}});
 })();
 </script>
 <script>
