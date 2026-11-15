@@ -1,4 +1,4 @@
-const C='ahmed-maher-v6',FB='https://www.gstatic.com/firebasejs/10.12.2/';
+const C='ahmed-maher-v7',FB='https://www.gstatic.com/firebasejs/10.12.2/';
 const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./firebase-config.js',FB+'firebase-app.js',FB+'firebase-auth.js',FB+'firebase-firestore.js'];
 // طلبات Firebase نفسها (قاعدة البيانات وتسجيل الدخول) لا يجب أن يعترضها الـ service worker
 const SKIP=['firestore.googleapis.com','identitytoolkit.googleapis.com','securetoken.googleapis.com','firebaseinstallations.googleapis.com','www.googleapis.com','www.google-analytics.com','analytics.google.com','www.googletagmanager.com'];

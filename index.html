@@ -333,7 +333,8 @@ render();
 (async()=>{
 const A=$('#auth'),er=m=>$('#aer').textContent=m||'',al=m=>$('#al').textContent=m,UK='electro_cloud_uid',BK=KEY+'_pre_cloud_backup',CH=200000;
 let stage='بدء',authReady=false,AU,FS,auth,fs;
-setTimeout(()=>{if(!authReady)al('تعذر إكمال التحميل عند: '+stage+' — تأكد من الإنترنت ثم أعد فتح الصفحة')},10000);
+window.fixAuth=async()=>{try{for(const x of await indexedDB.databases())if(/firebase/i.test(x.name))indexedDB.deleteDatabase(x.name)}catch(e){}try{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister();for(const k of await caches.keys())await caches.delete(k)}catch(e){}location.reload()};
+setTimeout(()=>{if(!authReady)$('#al').innerHTML='تعذر إكمال التحميل عند: '+stage+'<br><br><button class="b bp" onclick="fixAuth()">إصلاح وإعادة المحاولة</button>'},10000);
 try{
  if(!window.FIREBASE_CONFIG)throw Error('ملف firebase-config.js غير موجود بجانب index.html');
  stage='تحميل مكتبات Firebase';al('جارٍ التحميل… ('+stage+')');
@@ -342,8 +343,8 @@ try{
  AU=A1;FS=F1;
  stage='تهيئة Firebase';al('جارٍ التحميل… ('+stage+')');
  const app=APP.initializeApp(window.FIREBASE_CONFIG);
- auth=AU.initializeAuth(app,{persistence:[AU.indexedDBLocalPersistence,AU.browserLocalPersistence]});
- try{fs=FS.initializeFirestore(app,{localCache:FS.persistentLocalCache({tabManager:FS.persistentMultipleTabManager()})})}catch(x){console.warn('persistence',x);fs=FS.getFirestore(app)}
+ auth=AU.initializeAuth(app,{persistence:[AU.browserLocalPersistence,AU.browserSessionPersistence,AU.inMemoryPersistence]});
+ fs=FS.getFirestore(app);
 }catch(x){console.error(x);al('خطأ عند «'+stage+'»: '+(x.message||x));return}
 const cloud={uid:null,ready:false,last:{},meta:{},pending:0,t:null,inc:null,col:null,unsub:null};
 const ERR={'auth/invalid-email':'بريد إلكتروني غير صحيح','auth/user-not-found':'البريد أو كلمة المرور غير صحيحة','auth/wrong-password':'البريد أو كلمة المرور غير صحيحة','auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة','auth/email-already-in-use':'هذا البريد مسجل بالفعل، سجّل دخولك','auth/weak-password':'كلمة المرور ضعيفة (6 خانات على الأقل)','auth/network-request-failed':'لا يوجد اتصال بالإنترنت','auth/too-many-requests':'محاولات كثيرة، حاول بعد قليل','auth/operation-not-allowed':'فعّل Email/Password من Firebase Authentication','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'مفتاح apiKey غير صحيح في firebase-config.js','auth/invalid-api-key':'مفتاح apiKey غير صحيح في firebase-config.js'};
